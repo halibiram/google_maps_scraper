@@ -7,6 +7,7 @@ import pandas as pd
 import argparse
 import os
 import sys
+import re
 
 @dataclass
 class Business:
@@ -190,49 +191,95 @@ def main():
                     
                     
                     business = Business()
-                   
-                    if len(listing.get_attribute(name_attibute)) >= 1:
-        
-                        business.name = listing.get_attribute(name_attibute)
-                    else:
-                        business.name = ""
+                    
+                    # New name scraping logic
+                    name_element_locator = listing.locator('//div[contains(@class, "fontHeadlineSmall")]')
+                    name_element = name_element_locator.first if name_element_locator.count() > 0 else None # Ensure name_element is None if not found
+                    
+                    if name_element and name_element.is_visible():
+                        try:
+                            name_text = name_element.inner_text(timeout=100).strip()
+                            if len(name_text) > 0:
+                                business.name = name_text
+                            else: # Fallback if inner_text is empty
+                                name_value = listing.get_attribute('aria-label')
+                                if name_value is not None and len(name_value) >= 1:
+                                    business.name = name_value
+                                else:
+                                    business.name = ""
+                        except Exception: # Catch timeout or other errors from inner_text
+                            name_value = listing.get_attribute('aria-label')
+                            if name_value is not None and len(name_value) >= 1:
+                                business.name = name_value
+                            else:
+                                business.name = ""
+                    else: # Fallback if name_element is not found or not visible
+                        name_value = listing.get_attribute('aria-label')
+                        if name_value is not None and len(name_value) >= 1:
+                            business.name = name_value
+                        else:
+                            business.name = ""
+                            
                     if page.locator(address_xpath).count() > 0:
-                        business.address = page.locator(address_xpath).all()[0].inner_text()
+                        business.address = page.locator(address_xpath).first.inner_text() # Use .first with inner_text
                     else:
                         business.address = ""
                     if page.locator(website_xpath).count() > 0:
-                        business.website = page.locator(website_xpath).all()[0].inner_text()
+                        business.website = page.locator(website_xpath).first.inner_text() # Use .first with inner_text
                     else:
                         business.website = ""
                     if page.locator(phone_number_xpath).count() > 0:
-                        business.phone_number = page.locator(phone_number_xpath).all()[0].inner_text()
+                        business.phone_number = page.locator(phone_number_xpath).first.inner_text() # Use .first with inner_text
                     else:
                         business.phone_number = ""
-                    if page.locator(review_count_xpath).count() > 0:
-                        business.reviews_count = int(
-                            page.locator(review_count_xpath).inner_text()
-                            .split()[0]
-                            .replace(',','')
-                            .strip()
-                        )
-                    else:
-                        business.reviews_count = ""
+
+                    # New combined logic for reviews_count and reviews_average
+                    review_element_aria_label = None
+                    reviews_average_locator = page.locator(reviews_average_xpath) # reviews_average_xpath defined above
+                    if reviews_average_locator.count() > 0:
+                        review_element_aria_label = reviews_average_locator.first.get_attribute('aria-label')
+
+                    business.reviews_average = None # Default to None
+                    business.reviews_count = None   # Default to None
+
+                    # Logic for reviews_average (from aria-label of stars element)
+                    if review_element_aria_label:
+                        # DEBUG print statement removed
+                        rating_match = re.search(r'([\d.,]+)\s*stars', review_element_aria_label, re.IGNORECASE)
+                        if rating_match:
+                            try:
+                                business.reviews_average = float(rating_match.group(1).replace(',', '.'))
+                            except ValueError:
+                                pass # Keep as None
                         
-                    if page.locator(reviews_average_xpath).count() > 0:
-                        business.reviews_average = float(
-                            page.locator(reviews_average_xpath).get_attribute(name_attibute)
-                            .split()[0]
-                            .replace(',','.')
-                            .strip())
-                    else:
-                        business.reviews_average = ""
+                        # Special handling for "no reviews" or "be the first to review" in aria-label
+                        if "no reviews" in review_element_aria_label.lower() or \
+                           "be the first to review" in review_element_aria_label.lower():
+                            business.reviews_average = 0.0 # Average is 0.0
+                            business.reviews_count = 0   # Count is 0
                     
+                    # New logic for reviews_count using the new XPath, if not already set by "no reviews"
+                    if business.reviews_count is None: # Only try if not already set to 0 by "no reviews"
+                        new_review_count_xpath = '//div[@jsaction="pane.reviewChart.moreReviews"]//span[starts-with(text(), "(")]' # Removed ends-with()
+                        review_count_elements = page.locator(new_review_count_xpath)
+                        
+                        if review_count_elements.count() > 0:
+                            try:
+                                raw_review_count_text = review_count_elements.first.inner_text(timeout=100) # Added timeout
+                                # Extract numbers from text like "(123)" or "(1,234)"
+                                count_match_text = re.search(r'\((\d[\d,]*)\)', raw_review_count_text)
+                                if count_match_text:
+                                    business.reviews_count = int(count_match_text.group(1).replace(',', ''))
+                                # If regex doesn't match, reviews_count remains None
+                            except Exception: # Catch potential errors from inner_text or regex
+                                pass # Keep as None if any error occurs
+                        # If element not found, reviews_count remains None
                     
                     business.latitude, business.longitude = extract_coordinates_from_url(page.url)
 
                     business_list.business_list.append(business)
                 except Exception as e:
-                    print(f'Error occured: {e}')
+                    print(f'Error occured while scraping a listing: {e}') # More specific error message
             
             #########
             # output
