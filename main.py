@@ -8,6 +8,17 @@ import argparse
 import os
 import sys
 
+from fastapi import FastAPI
+from pydantic import BaseModel
+import uvicorn
+
+app = FastAPI()
+
+# Pydantic model for request body
+class ScrapeRequest(BaseModel):
+    search_query: str
+    total_results: int
+
 @dataclass
 class Business:
     """holds business data"""
@@ -68,63 +79,33 @@ def extract_coordinates_from_url(url: str) -> tuple[float,float]:
     # return latitude, longitude
     return float(coordinates.split(',')[0]), float(coordinates.split(',')[1])
 
-def main():
-    
-    ########
-    # input 
-    ########
-    
-    # read search from arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--search", type=str)
-    parser.add_argument("-t", "--total", type=int)
-    args = parser.parse_args()
-    
-    if args.search:
-        search_list = [args.search]
-        
-    if args.total:
-        total = args.total
-    else:
-        # if no total is passed, we set the value to random big number
-        total = 1_000_000
-
-    if not args.search:
-        search_list = []
-        # read search from input.txt file
-        input_file_name = 'input.txt'
-        # Get the absolute path of the file in the current working directory
-        input_file_path = os.path.join(os.getcwd(), input_file_name)
-        # Check if the file exists
-        if os.path.exists(input_file_path):
-        # Open the file in read mode
-            with open(input_file_path, 'r') as file:
-            # Read all lines into a list
-                search_list = file.readlines()
-                
-        if len(search_list) == 0:
-            print('Error occured: You must either pass the -s search argument, or add searches to input.txt')
-            sys.exit()
+def scrape_data(search_query: str, total_results: int):
+    """
+    Scrapes Google Maps for business data based on a search query.
+    """
+    search_list = [search_query] # Use the provided search_query
+    total = total_results # Use the provided total_results
         
     ###########
     # scraping
     ###########
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True) # Changed to headless=True
         page = browser.new_page()
 
         page.goto("https://www.google.com/maps", timeout=60000)
         # wait is added for dev phase. can remove it in production
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(2000) # Reduced wait time
         
-        for search_for_index, search_for in enumerate(search_list):
-            print(f"-----\n{search_for_index} - {search_for}".strip())
+        # The loop will run once as search_list contains one item
+        for search_for_index, search_for in enumerate(search_list): 
+            print(f"-----\nScraping for: {search_for}".strip())
 
             page.locator('//input[@id="searchboxinput"]').fill(search_for)
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(1000) # Reduced wait time
 
             page.keyboard.press("Enter")
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(3000) # Reduced wait time
 
             # scrolling
             page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
@@ -134,17 +115,17 @@ def main():
             previously_counted = 0
             while True:
                 page.mouse.wheel(0, 10000)
-                page.wait_for_timeout(3000)
+                page.wait_for_timeout(2000) # Reduced wait time
 
                 if (
                     page.locator(
                         '//a[contains(@href, "https://www.google.com/maps/place")]'
                     ).count()
-                    >= total
+                    >= total_results # Use total_results directly
                 ):
                     listings = page.locator(
                         '//a[contains(@href, "https://www.google.com/maps/place")]'
-                    ).all()[:total]
+                    ).all()[:total_results] # Use total_results
                     listings = [listing.locator("xpath=..") for listing in listings]
                     print(f"Total Scraped: {len(listings)}")
                     break
@@ -179,7 +160,7 @@ def main():
             for listing in listings:
                 try:
                     listing.click()
-                    page.wait_for_timeout(5000)
+                    page.wait_for_timeout(2000) # Reduced wait time
 
                     name_attibute = 'aria-label'
                     address_xpath = '//button[@data-item-id="address"]//div[contains(@class, "fontBodyMedium")]'
@@ -237,11 +218,22 @@ def main():
             #########
             # output
             #########
-            business_list.save_to_excel(f"google_maps_data_{search_for}".replace(' ', '_'))
-            business_list.save_to_csv(f"google_maps_data_{search_for}".replace(' ', '_'))
-
+            # Removed file saving:
+            # business_list.save_to_excel(f"google_maps_data_{search_for}".replace(' ', '_'))
+            # business_list.save_to_csv(f"google_maps_data_{search_for}".replace(' ', '_'))
+        
         browser.close()
+        return business_list.business_list
+
+
+# POST endpoint for scraping
+@app.post("/scrape")
+async def scrape_endpoint(request: ScrapeRequest):
+    scraped_data = scrape_data(request.search_query, request.total_results)
+    return scraped_data
 
 
 if __name__ == "__main__":
-    main()
+    # This allows running with `python main.py` for development/testing of the script itself,
+    # but for serving the API, `uvicorn main:app --reload` should be used.
+    uvicorn.run(app, host="0.0.0.0", port=8000)
