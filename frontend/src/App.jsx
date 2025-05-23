@@ -68,21 +68,21 @@ function App() {
           flexDirection: 'column',
           gap: 2,
           p: 2,
-          border: `1px solid ${theme.palette.outline}`,
+          border: `1px solid ${theme.palette.divider}`, // Changed to theme.palette.divider for subtle border
           borderRadius: theme.shape.borderRadius,
         })}
           onSubmit={(e) => { e.preventDefault(); handleSearch(); }} // Handle form submission via Enter key
         >
           <TextField
             label="What to search for?"
-            variant="filled" // Changed to filled as per theme default
+            variant="outlined" // Changed to outlined as per new theme default
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={isLoading}
           />
           <TextField
             label="How many results?"
-            variant="filled" // Changed to filled as per theme default
+            variant="outlined" // Changed to outlined as per new theme default
             type="number"
             value={totalResults}
             onChange={(e) => {
@@ -95,9 +95,17 @@ function App() {
           <Button
             type="submit" // Make button submit the form
             variant="contained"
+            color="primary" // Explicitly set color primary
             startIcon={<SearchIcon />}
             onClick={handleSearch} // Still useful for direct click
             disabled={isLoading || !searchQuery.trim()} // Disable if loading or search query is empty
+            sx={{
+              // Primary color from theme is #A0D2DB
+              '&:hover': {
+                backgroundColor: '#8BC8D3', // Manually chosen slightly darker shade of #A0D2DB
+                // boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2), 0px 4px 5px 0px rgba(0,0,0,0.14), 0px 1px 10px 0px rgba(0,0,0,0.12)' // Optional subtle shadow
+              },
+            }}
           >
             {isLoading ? <CircularProgress size={24} color="inherit" /> : "Search"}
           </Button>
@@ -110,7 +118,18 @@ function App() {
             </Box>
           )}
           {error && (
-            <Alert severity="error" sx={{ my: 2 }}>
+            <Alert
+              severity="error"
+              sx={{
+                my: 2,
+                opacity: 1, // When rendered, it's fully opaque
+                transition: 'opacity 0.3s ease-in-out',
+                // Note: for a true fade-out *before* removal,
+                // you'd need to delay setting error to null, or use react-transition-group.
+                // This simple approach will make it fade in when 'error' gets a value.
+                // When 'error' becomes null, it's removed from the DOM.
+              }}
+            >
               {error}
             </Alert>
           )}

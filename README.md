@@ -70,6 +70,31 @@ The server will start on `http://localhost:8000`.
   ```
   If no results are found, or an error occurs during scraping for a specific item, it might be skipped or values might be empty strings/null depending on the scraping outcome for that particular field.
 
+## Frontend Application
+
+The project includes a React-based frontend application for interacting with the scraper API. The web application features a modern, minimalist user interface with a pastel color scheme, providing a clean and user-friendly way to interact with the scraper. It is built using React and Material-UI (MUI) components.
+
+### Running the Frontend Application:
+
+1.  **Navigate to the frontend directory:**
+    ```bash
+    cd frontend
+    ```
+
+2.  **Install dependencies:**
+    If you haven't already, install the necessary Node.js packages.
+    ```bash
+    npm install
+    ```
+
+3.  **Start the development server:**
+    ```bash
+    npm run dev
+    ```
+    This will typically start the frontend application on `http://localhost:5173` (Vite's default) or another port if specified in the Vite configuration or if the default is busy. Check your terminal output for the exact URL.
+
+Once the frontend server is running and the backend API server (`python main.py`) is also running, you can open the frontend URL in your browser to use the application.
+
 ## Command-Line Interface (CLI) Usage (Legacy)
 
 The script can also be run directly from the command line for simple, single-shot scraping tasks. This was the original method of operation.

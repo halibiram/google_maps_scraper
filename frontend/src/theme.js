@@ -1,75 +1,94 @@
+// frontend/src/theme.js
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#6750A4', // M3 Primary
+      main: '#A0D2DB', // Soft pastel cyan/blue
     },
     secondary: {
-      main: '#7D5260', // M3 Secondary
+      main: '#E5B4B4', // Soft pastel pink/coral
     },
     background: {
-      default: '#FFFBFE', // M3 Surface
-      paper: '#FEF7FF',    // M3 Surface Variant (for Cards, etc.)
+      default: '#FDFDFD', // Very light off-white
+      paper: '#FFFFFF',   // White for cards/paper elements
     },
     text: {
-      primary: '#1D1B20', // M3 On Surface
-      secondary: '#49454F', // M3 On Surface Variant
+      primary: '#555555',   // Dark grey
+      secondary: '#777777', // Medium grey
     },
     error: {
-      main: '#B3261E', // M3 Error
+      main: '#F4C7C7',     // Pastel pink/red
     },
-    outline: '#79747E', // M3 Outline
+    divider: '#E0E0E0', // For subtle borders/dividers
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h6: { // Used in AppBar
-      fontWeight: 500,
+    h6: { // For AppBar/Title
+      fontWeight: 400, // Lighter for minimalist feel
+      color: '#444444', // Slightly darker for title emphasis
     },
-    // Add other typography adjustments if needed
+    button: {
+      textTransform: 'none', // Minimalist buttons often don't use all caps
+    }
   },
   shape: {
-    borderRadius: 12, // Slightly more rounded for M3 feel on cards/buttons
+    borderRadius: 8, // Consistent, slightly soft border radius
   },
-  components: { // Global overrides for components
+  components: {
+    MuiAppBar: { // If AppBar is kept, make it minimalist
+      styleOverrides: {
+        root: {
+          backgroundColor: 'transparent', // Or background.default for seamless look
+          boxShadow: 'none', // No shadow for minimalist
+          borderBottom: '1px solid #E0E0E0', // Subtle separator
+        }
+      }
+    },
     MuiButton: {
       styleOverrides: {
         root: {
-          // textTransform: 'none', // M3 buttons often don't use all caps
-          // M3 buttons can have a slightly taller default height, but default MUI is usually fine.
-        }
+          borderRadius: 8, // Match global shape
+          // Hover effects will be handled specifically in the next step
+        },
+        containedPrimary: { // Example for primary button
+            // Styles for primary button if needed beyond default
+        },
       }
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          // Using surface variant color for card background
-          backgroundColor: '#FEF7FF', // M3 Surface Variant explicitly for Card
-          // M3 Elevation 1
-          boxShadow: '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3)',
-          // If cards should explicitly use outline variant:
-          // borderColor: '#79747E', // This would apply if variant="outlined" is set on Card
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E0E0E0', // Subtle border for cards
+          boxShadow: 'none', // No shadow for minimalism
+          borderRadius: 8, // Consistent with global shape
         }
       }
     },
     MuiTextField: {
       defaultProps: {
-        variant: 'filled', // M3 often features filled text fields
+        variant: 'outlined', // Outlined is often cleaner for minimalist
       },
       styleOverrides: {
         root: {
-          // Minor adjustments if needed for filled variant to match M3 closer
+          // Styles for text fields if needed
         }
       }
     },
-    MuiAppBar: {
+    MuiAlert: { // For subtle error messages
         styleOverrides: {
-            root: {
-                backgroundColor: '#FFFBFE', // M3 Surface for a "surface" app bar
-                color: '#1D1B20', // M3 On Surface text color
-                boxShadow: '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3)', // M3 Elevation 1, if desired for app bar
-            }
+            root: { // General styling for all alerts
+                borderRadius: 8,
+                border: '1px solid transparent', // Base border
+            },
+            standardError: { // Specific for error alerts
+                backgroundColor: '#FFF0F0', // Very light pastel red background
+                color: '#B75757', // Darker pastel red for text for readability
+                borderColor: '#F4C7C7' // Border color matching error.main
+            },
+            // Define standardSuccess, standardWarning, standardInfo similarly if needed
         }
     }
   }
